@@ -235,7 +235,7 @@
                     </div>
                 </div>
 
-                <div class="hidden bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div id="container-pendientes" class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                     <div class="p-6 bg-slate-50 border-b border-slate-100"><h3 class="text-xs font-black text-[#696158] uppercase tracking-widest">Listado de Equipos Pendientes</h3></div>
                     <div class="overflow-x-auto max-h-[400px] audit-list">
                         <table class="w-full text-left">
@@ -334,30 +334,40 @@
                 </form>
             </div>
 
-            <div id="view-history-tab">
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                        <h2 class="font-black text-[#696158] uppercase text-xs tracking-widest">Base de Datos de Mantenimiento</h2>
-                        <button onclick="loadHistory()" class="bg-white border border-slate-200 p-2 rounded-xl text-[#EA7600]"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="text-slate-400 uppercase text-[9px] font-black tracking-widest border-b border-slate-50">
-                                    <th class="px-6 py-4">Fecha Creación</th>
-                                    <th class="px-6 py-4">Equipo / Cliente</th>
-                                    <th class="px-6 py-4">Última Modificación</th>
-                                    <th class="px-6 py-4">Estado</th>
-                                    <th class="px-6 py-4 text-right">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-table-body" class="divide-y divide-slate-50"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+<div id="view-history-tab" class="hidden">
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-6 grid grid-cols-2 gap-4 border-b border-slate-50 bg-slate-50">
+    <select id="filt-equipo" onchange="filtrarHistorial()" class="text-[10px] border border-slate-200 rounded-xl p-2 outline-none">
+        <option value="">Seleccione Equipo...</option>
+    </select>
+    <select id="filt-estado" onchange="filtrarHistorial()" class="text-[10px] border border-slate-200 rounded-xl p-2 outline-none">
+        <option value="">Seleccione Estado...</option>
+        <option value="CONCLUIDO">CONCLUIDO</option>
+        <option value="EN DESARROLLO">EN DESARROLLO</option>
+        <option value="BORRADOR">BORRADOR</option>
+    </select>
+</div>
+ </div>
+        <div class="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+            <h2 class="font-black text-[#696158] uppercase text-xs tracking-widest">Base de Datos de Mantenimiento</h2>
+            <button onclick="loadHistory()" class="bg-white border border-slate-200 p-2 rounded-xl text-[#EA7600]"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="text-slate-400 uppercase text-[9px] font-black tracking-widest border-b border-slate-50">
+                        <th class="px-6 py-4">Fecha Creación</th>
+                        <th class="px-6 py-4">Tag / Equipo de Trabajo</th>
+                        <th class="px-6 py-4">Última Modificación</th>
+                        <th class="px-6 py-4">Estado</th>
+                        <th class="px-6 py-4 text-right">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table-body" class="divide-y divide-slate-50"></tbody>
+            </table>
         </div>
     </div>
+</div>
 
 
 
@@ -528,7 +538,11 @@
             const { data: tareas } = await _supabase.from('tareas_checklist').select('*').order('orden');
             tareasMaster = tareas;
             renderForm(secciones, tareas);
+            await loadHistory(); // Cargamos datos
+            renderDashboard();   // Renderizamos dashboard
+            switchTab('dashboard-tab'); // Aseguramos que esta pestaña sea la activa
             loadHistory();
+            inicializarFiltros()
         }
 
         function switchTab(tabId) {
@@ -544,75 +558,77 @@
             else if (tabId === 'dashboard-tab') renderDashboard();
             else if (tabId === 'form-tab') {
                 if (!document.getElementById('edit-id').value && !currentUser) formAuthLock.classList.remove('hidden');
-                else formAuthLock.classList.add('hidden');
+                else   formAuthLock.classList.add('hidden');
             }
         }
 
-        async function loadHistory() {
-            const { data, error } = await _supabase.from('checklists_mantenimiento_vdf')
-                .select(`*, historial_modificaciones(usuario_email, fecha_modificacion)`)
-                .order('fecha_creacion', { ascending: false });
-            if (error) return;
-            reportesMaster = data;
-            const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
-            const isLoggedIn = !!currentUser;
+async function loadHistory() {
+    const { data, error } = await _supabase.from('checklists_mantenimiento_vdf')
+        .select(`*, historial_modificaciones(usuario_email, fecha_modificacion)`)
+        .order('fecha_creacion', { ascending: false });
+    if (error) return;
+    reportesMaster = data;
+    
+    // Simplemente llamamos a la misma función de renderizado
+    renderTablaHistorial(reportesMaster);
+}
+
+ function renderDashboard() {
+    // 1. Obtener filtros
+    const filterArea = document.getElementById('filter-area').value;
+    const filterLoc = document.getElementById('filter-ubicacion').value;
+    
+    // 2. Filtrar datos
+    let filteredSheet = sheetData.filter(s => 
+        (filterArea === "" || s.area === filterArea) && 
+        (filterLoc === "" || s.ubicacion === filterLoc)
+    );
+
+    // 3. Calcular métricas
+    const total = filteredSheet.length;
+    const done = reportesMaster.filter(r => r.estado === 'CONCLUIDO' && filteredSheet.some(s => s.tag === r.tag_equipo)).length;
+    const pending = reportesMaster.filter(r => r.estado === 'EN DESARROLLO' && filteredSheet.some(s => s.tag === r.tag_equipo)).length;
+    const none = total - done - pending;
+    const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    // 4. Actualizar estadísticas visuales
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-done').textContent = done;
+    document.getElementById('stat-pending').textContent = pending;
+    document.getElementById('stat-none').textContent = none;
+    document.getElementById('chart-percentage').textContent = percent + '%';
+    document.getElementById('chart-progress-path').style.strokeDasharray = `${percent}, 100`;
+    document.getElementById('chart-stats-label').textContent = `${done} de ${total} Equipos Concluidos`;
+
+    // 5. Gestión del contenedor de la tabla
+    const container = document.getElementById('container-pendientes');
+    const pendingListBody = document.getElementById('dashboard-pending-body');
+
+    // Solo mostramos el contenedor si hay registros
+    if (total > 0) {
+        container.classList.remove('hidden');
+        
+        // 6. Renderizar tabla
+        pendingListBody.innerHTML = filteredSheet.map(s => {
+            const rep = reportesMaster.find(r => r.tag_equipo === s.tag);
+            const status = rep ? rep.estado : 'SIN INICIAR';
+            const statusClass = status === 'CONCLUIDO' ? 'text-green-600' : (status === 'EN DESARROLLO' ? 'text-amber-600' : 'text-slate-400');
             
-            historyTableBody.innerHTML = data.map(item => {
-                const lastMod = item.historial_modificaciones && item.historial_modificaciones.length > 0 
-                    ? item.historial_modificaciones.reduce((prev, current) => (new Date(prev.fecha_modificacion) > new Date(current.fecha_modificacion)) ? prev : current)
-                    : null;
-
-                const lastModText = lastMod ? `${lastMod.usuario_email.split('@')[0]} | ${formatDateFull(lastMod.fecha_modificacion)}` : '---';
-
-                return `
-                <tr class="text-[10px] border-b border-slate-50 hover:bg-slate-50/50 cursor-pointer" onclick="viewChecklist('${item.id}', 'view')">
-                    <td class="px-6 py-4 font-mono">${formatDate(item.fecha_creacion)}</td>
-                    <td class="px-6 py-4">
-                        <div class="font-black text-[#696158]">${item.tag_equipo}</div>
-                        <div class="text-[8px] text-[#696158] uppercase tracking-tighter">${item.empresa_cliente || 'N/A'}</div>
-                    </td>
-                    <td class="px-6 py-4 text-[#696158] font-bold">${lastModText}</td>
-                    <td class="px-6 py-4">
-                        <span class="px-2 py-1 rounded-md font-black text-[8px] uppercase ${
-                            item.estado === 'CONCLUIDO' ? 'bg-green-100 text-green-700' : 
-                            item.estado === 'EN DESARROLLO' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
-                        }">${item.estado}</span>
-                    </td>
-                    <td class="px-6 py-4 text-right">
-                        <div class="flex items-center justify-end gap-3">
-                            <button type="button" onclick="event.stopPropagation(); viewChecklist('${item.id}', 'view')" class="text-[#696158] font-black uppercase text-[8px] tracking-widest hover:underline">Ver Reporte</button>
-                            ${isLoggedIn ? `<button type="button" onclick="event.stopPropagation(); viewChecklist('${item.id}', 'edit')" class="bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg font-black border border-amber-100 uppercase text-[8px] hover:bg-amber-600 hover:text-white transition-all">Editar</button>` : ''}
-                            ${isAdmin ? `<button type="button" onclick="event.stopPropagation(); requestDelete('${item.id}')" class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-black border border-red-100 uppercase text-[8px] hover:bg-red-600 hover:text-white transition-all">Borrar</button>` : ''}
-                        </div>
-                    </td>
+            return `
+                <tr class="text-[10px] border-b border-slate-50">
+                    <td class="px-6 py-4 font-black text-[#696158]">${s.tag}</td>
+                    <td class="px-6 py-4 text-[#696158]">${s.area}</td>
+                    <td class="px-6 py-4 text-[#696158]">${s.ubicacion}</td>
+                    <td class="px-6 py-4 font-black uppercase text-[8px] ${statusClass}">${status}</td>
                 </tr>`;
-            }).join('');
-        }
+        }).join('');
+    } else {
+        // Ocultar si no hay nada que mostrar para no dejar un contenedor vacío
+        container.classList.add('hidden');
+        pendingListBody.innerHTML = '';
+    }
+}
 
-        function renderDashboard() {
-            const filterArea = document.getElementById('filter-area').value;
-            const filterLoc = document.getElementById('filter-ubicacion').value;
-            let filteredSheet = sheetData.filter(s => (filterArea === "" || s.area === filterArea) && (filterLoc === "" || s.ubicacion === filterLoc));
-            const total = filteredSheet.length;
-            const done = reportesMaster.filter(r => r.estado === 'CONCLUIDO' && filteredSheet.some(s => s.tag === r.tag_equipo)).length;
-            const pending = reportesMaster.filter(r => r.estado === 'EN DESARROLLO' && filteredSheet.some(s => s.tag === r.tag_equipo)).length;
-            const none = total - done - pending;
-            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-            document.getElementById('stat-total').textContent = total;
-            document.getElementById('stat-done').textContent = done;
-            document.getElementById('stat-pending').textContent = pending;
-            document.getElementById('stat-none').textContent = none;
-            document.getElementById('chart-percentage').textContent = percent + '%';
-            document.getElementById('chart-progress-path').style.strokeDasharray = `${percent}, 100`;
-            document.getElementById('chart-stats-label').textContent = `${done} de ${total} Equipos Concluidos`;
-            const pendingListBody = document.getElementById('dashboard-pending-body');
-            pendingListBody.innerHTML = filteredSheet.map(s => {
-                const rep = reportesMaster.find(r => r.tag_equipo === s.tag);
-                const status = rep ? rep.estado : 'SIN INICIAR';
-                const statusClass = status === 'CONCLUIDO' ? 'text-green-600' : (status === 'EN DESARROLLO' ? 'text-amber-600' : 'text-slate-400');
-                return `<tr class="text-[10px] border-b border-slate-50"><td class="px-6 py-4 font-black text-[#696158]">${s.tag}</td><td class="px-6 py-4 text-[#696158]">${s.area}</td><td class="px-6 py-4 text-[#696158]">${s.ubicacion}</td><td class="px-6 py-4 font-black uppercase text-[8px] ${statusClass}">${status}</td></tr>`;
-            }).join('');
-        }
 
         function requestDelete(id) { recordToDelete = id; document.getElementById('delete-modal').classList.remove('hidden'); }
         function cancelDelete() { document.getElementById('delete-modal').classList.add('hidden'); recordToDelete = null; }
@@ -770,18 +786,46 @@
                 </div>`).join('');
         }
 
-        function renderTarea(tarea) {
-            let extra = '';
-            const desc = tarea.descripcion.toLowerCase();
-            if (desc.includes("anotar secuencia de fases")) {
-                extra = `<div class="flex gap-2 mt-3"><input type="text" placeholder="U" data-task="${tarea.id}" data-field="valor_u" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="V" data-task="${tarea.id}" data-field="valor_v" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="W" data-task="${tarea.id}" data-field="valor_w" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"></div>`;
-            } else if (desc.includes("partir en control local")) {
-                extra = `<div class="flex gap-2 mt-3"><input type="text" placeholder="Hz" data-task="${tarea.id}" data-field="frec_2" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="V" data-task="${tarea.id}" data-field="volt_2" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="A" data-task="${tarea.id}" data-field="amp_2" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"></div>`;
-            } else if (tarea.tipo_entrada === 'volt_amp') {
-                extra = `<div class="flex gap-2 mt-2"><input type="text" placeholder="V" data-task="${tarea.id}" data-field="valor_v" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="A" data-task="${tarea.id}" data-field="valor_w" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"></div>`;
-            }
-            return `<div class="p-5 flex justify-between items-start gap-4"><div class="flex-grow"><p class="text-[11px] font-bold text-slate-600 uppercase leading-tight">${tarea.descripcion}</p>${extra}</div><div class="flex flex-col items-center"><span class="text-[8px] font-black text-slate-300 mb-1">V°B°</span><input type="checkbox" data-task="${tarea.id}" data-field="vb_completado" class="rounded-lg"></div></div>`;
-        }
+
+
+
+       // function renderTarea(tarea) {
+        //    let extra = '';
+        //    const desc = tarea.descripcion.toLowerCase();
+         //   if (desc.includes("anotar secuencia de fases")) {
+         //       extra = `<div class="flex gap-2 mt-3"><input type="text" placeholder="U" data-task="${tarea.id}" data-field="valor_u" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="V" data-task="${tarea.id}" data-field="valor_v" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="W" data-task="${tarea.id}" data-field="valor_w" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"></div>`;
+         //   } else if (desc.includes("partir en control local")) {
+        //        extra = `<div class="flex gap-2 mt-3"><input type="text" placeholder="Hz" data-task="${tarea.id}" data-field="frec_2" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="V" data-task="${tarea.id}" data-field="volt_2" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="A" data-task="${tarea.id}" data-field="amp_2" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"></div>`;
+        //    } else if (tarea.tipo_entrada === 'volt_amp') {
+        //        extra = `<div class="flex gap-2 mt-2"><input type="text" placeholder="V" data-task="${tarea.id}" data-field="valor_v" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="A" data-task="${tarea.id}" data-field="valor_w" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"></div>`;
+       //     }
+      //      return `<div class="p-5 flex justify-between items-start gap-4"><div class="flex-grow"><p class="text-[11px] font-bold text-slate-600 uppercase leading-tight">${tarea.descripcion}</p>${extra}</div><div class="flex flex-col items-center"><span class="text-[8px] font-black text-slate-300 mb-1">V°B°</span><input type="checkbox" data-task="${tarea.id}" data-field="vb_completado" class="rounded-lg"></div></div>`;
+       // }
+
+       function renderTarea(tarea) {
+    let extra = '';
+    const desc = tarea.descripcion.toLowerCase();
+
+    if (desc.includes("anotar secuencia de fases")) {
+        extra = `<div class="flex gap-2 mt-3"><input type="text" placeholder="U" data-task="${tarea.id}" data-field="valor_u" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="V" data-task="${tarea.id}" data-field="valor_v" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="W" data-task="${tarea.id}" data-field="valor_w" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"></div>`;
+    } else if (desc.includes("partir en control local")) {
+        extra = `<div class="flex gap-2 mt-3"><input type="text" placeholder="Hz" data-task="${tarea.id}" data-field="frec_2" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="V" data-task="${tarea.id}" data-field="volt_2" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="A" data-task="${tarea.id}" data-field="amp_2" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"></div>`;
+    } 
+    // --- AQUÍ LA MODIFICACIÓN PARA EL CONDENSADOR ---
+    else if (desc.includes("revisar valor del condensador")) {
+        extra = `<div class="grid grid-cols-2 gap-2 mt-3">
+                    <input type="text" placeholder="Valor Original" data-task="${tarea.id}" data-field="c_original" class="border p-2 rounded-lg text-[10px] bg-slate-50">
+                    <input type="text" placeholder="Valor Real" data-task="${tarea.id}" data-field="c_real" class="border p-2 rounded-lg text-[10px] bg-slate-50">
+                 </div>`;
+    } 
+    // -------------------------------------------------
+    else if (tarea.tipo_entrada === 'volt_amp') {
+        extra = `<div class="flex gap-2 mt-2"><input type="text" placeholder="V" data-task="${tarea.id}" data-field="valor_v" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="A" data-task="${tarea.id}" data-field="valor_w" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"></div>`;
+    }
+
+    return `<div class="p-5 flex justify-between items-start gap-4"><div class="flex-grow"><p class="text-[11px] font-bold text-slate-600 uppercase leading-tight">${tarea.descripcion}</p>${extra}</div><div class="flex flex-col items-center"><span class="text-[8px] font-black text-slate-300 mb-1">V°B°</span><input type="checkbox" data-task="${tarea.id}" data-field="vb_completado" class="rounded-lg"></div></div>`;
+}
+
 
         function renderTimeline(mods) {
             if (!mods || !mods.length) { reportAuditSection.classList.add('hidden'); return; }
@@ -795,7 +839,81 @@
                 </div>`).join('');
         }
 
-        function handleNewChecklistBtn() { resetFormToNew(); switchTab('form-tab'); }
+function handleNewChecklistBtn() {
+    // Si no hay usuario, mostramos el modal de login directamente
+    if (!currentUser) {
+        toggleLoginModal();
+    } else {
+        // Si está logueado, procedemos normal
+        resetFormToNew();
+        switchTab('form-tab');
+    }
+}
+
+function inicializarFiltros() {
+    const selectEquipo = document.getElementById('filt-equipo');
+    // Obtenemos los tags únicos desde sheetData
+    const tagsUnicos = [...new Set(sheetData.map(item => item.tag))].filter(t => t);
+    
+    tagsUnicos.sort().forEach(tag => {
+        const opt = document.createElement('option');
+        opt.value = tag;
+        opt.textContent = tag;
+        selectEquipo.appendChild(opt);
+    });
+}
+
+function filtrarHistorial() {
+    const e = document.getElementById('filt-equipo').value;
+    const es = document.getElementById('filt-estado').value;
+
+    const filtrados = reportesMaster.filter(item => {
+        return (e === "" || item.tag_equipo === e) &&
+               (es === "" || item.estado === es);
+    });
+
+    renderTablaHistorial(filtrados);
+}
+
+
+function renderTablaHistorial(data) {
+    const isAdmin = currentUser && currentUser.email === ADMIN_EMAIL;
+    const isLoggedIn = !!currentUser;
+    const tbody = document.getElementById('history-table-body');
+    
+    tbody.innerHTML = data.map(item => {
+        const lastMod = item.historial_modificaciones && item.historial_modificaciones.length > 0 
+            ? item.historial_modificaciones.reduce((prev, current) => (new Date(prev.fecha_modificacion) > new Date(current.fecha_modificacion)) ? prev : current)
+            : null;
+        const lastModText = lastMod ? `${lastMod.usuario_email.split('@')[0]} | ${formatDateFull(lastMod.fecha_modificacion)}` : '---';
+
+        return `
+        <tr class="text-[10px] border-b border-slate-50 hover:bg-slate-50/50 cursor-pointer" onclick="viewChecklist('${item.id}', 'view')">
+            <td class="px-6 py-4 font-mono">${formatDate(item.fecha_creacion)}</td>
+            <td class="px-6 py-4">
+                <div class="font-black text-[#696158]">${item.tag_equipo}</div>
+                <div class="text-[8px] text-[#696158] uppercase tracking-tighter">${item.empresa_cliente || 'N/A'}</div>
+            </td>
+            <td class="px-6 py-4 text-[#696158] font-bold">${lastModText}</td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 rounded-md font-black text-[8px] uppercase ${item.estado === 'CONCLUIDO' ? 'bg-green-100 text-green-700' : item.estado === 'EN DESARROLLO' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}">${item.estado}</span>
+            </td>
+            <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-3">
+                    <button type="button" onclick="event.stopPropagation(); viewChecklist('${item.id}', 'view')" class="text-[#696158] font-black uppercase text-[8px] tracking-widest hover:underline">Ver Reporte</button>
+                    ${isLoggedIn ? `<button type="button" onclick="event.stopPropagation(); viewChecklist('${item.id}', 'edit')" class="bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg font-black border border-amber-100 uppercase text-[8px] hover:bg-amber-600 hover:text-white transition-all">Editar</button>` : ''}
+                    ${isAdmin ? `<button type="button" onclick="event.stopPropagation(); requestDelete('${item.id}')" class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-black border border-red-100 uppercase text-[8px] hover:bg-red-600 hover:text-white transition-all">Borrar</button>` : ''}
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+
+
+
+
+
         function setFormDisabled(d) { form.querySelectorAll('input, select, textarea').forEach(i => { i.disabled = d; }); submitBtn.disabled = d || !currentUser; otServicioInput.disabled = true; areaEquipoInput.disabled = true; ubicacionEquipoInput.disabled = true; viewOnlyBadge.classList.toggle('hidden', !d); editIndicator.classList.toggle('hidden', d); }
         
         function resetFormToNew() { 
