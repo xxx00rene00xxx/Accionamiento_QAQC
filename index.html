@@ -62,14 +62,34 @@
    
 
 @media print {
-    /* Ocultar elementos que no quieres que aparezcan en papel */
-    nav, #sync-fab, #btn-login-action, .hero-section, footer, 
-    #cancel-edit-btn, #submit-btn, .form-locked-overlay,
-    .tab-active, button {
+    /* 1. Ocultar elementos de la interfaz web que no sirven en papel */
+    nav, 
+    #sync-fab, 
+    #btn-login-action, 
+    .hero-section, 
+    footer, 
+    #cancel-edit-btn, 
+    #submit-btn, 
+    .form-locked-overlay,
+    button, 
+    .tab-active,
+    #btn-dashboard-tab, 
+    #btn-history-tab, 
+    #btn-form-tab {
         display: none !important;
     }
 
-    /* Ajustar el contenedor para que ocupe toda la hoja */
+    /* 2. Ajustes globales para ahorrar espacio */
+    body {
+        background-color: white !important;
+        font-size: 9px !important; /* Texto más pequeño para más densidad */
+        color: black !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+
+    /* 3. Limpieza de contenedores principales */
     main, #view-form-tab {
         display: block !important;
         width: 100% !important;
@@ -77,16 +97,43 @@
         margin: 0 !important;
     }
 
-    /* Asegurar que el fondo blanco se mantenga y el texto sea legible */
-    body {
-        background-color: white !important;
-        color: black !important;
+    /* 4. Compactar los contenedores de secciones */
+    .bg-white {
+        border: 1px solid #e2e8f0 !important;
+        padding: 0.25rem !important; /* Reducido al mínimo */
+        margin-bottom: 0.25rem !important;
+        box-shadow: none !important;
+        page-break-inside: avoid; /* Evita que una sección se parta en dos hojas */
     }
 
-    /* Estilos adicionales para limpiar el formulario */
-    .bg-white {
-        box-shadow: none !important;
-        border: none !important;
+    /* 5. Ajustar formularios para impresión */
+    input, select, textarea {
+        border: 1px solid #cbd5e1 !important;
+        padding: 1px 2px !important;
+        font-size: 9px !important;
+        height: auto !important;
+        background-color: transparent !important;
+    }
+
+    /* 6. Optimizar el grid para no perder columnas */
+    .grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important; /* Mantiene 3 columnas */
+        gap: 0.2rem !important;
+    }
+
+    /* 7. Eliminar fondos oscuros para ahorrar tinta y mejorar legibilidad */
+    .bg-\[\#696158\] {
+        background-color: #f1f5f9 !important;
+        color: #000 !important;
+        border-bottom: 1px solid #000 !important;
+    }
+
+    /* 8. Asegurar visibilidad de checkboxes */
+    input[type="checkbox"] {
+        border: 1px solid #000 !important;
+        width: 10px !important;
+        height: 10px !important;
     }
 }
 
