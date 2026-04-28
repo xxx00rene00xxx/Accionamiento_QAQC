@@ -61,88 +61,7 @@
         }
    
 
-@media print {
-    /* 1. Ocultar elementos de la interfaz web que no sirven en papel */
-    nav, 
-    #sync-fab, 
-    #btn-login-action, 
-    .hero-section, 
-    footer, 
-    #cancel-edit-btn, 
-    #submit-btn, 
-    .form-locked-overlay,
-    button, 
-    .tab-active,
-    #btn-dashboard-tab, 
-    #btn-history-tab, 
-    #btn-form-tab {
-        display: none !important;
-    }
 
-	.no-print {
-        display: none !important;
-    }
-	/* Agrega esto para ocultar el título específico */
-    h1, .header-title-class, #header-id { 
-        display: none !important; 
-    }
-    /* 2. Ajustes globales para ahorrar espacio */
-    body {
-        background-color: white !important;
-        font-size: 9px !important; /* Texto más pequeño para más densidad */
-        color: black !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        width: 100% !important;
-    }
-
-    /* 3. Limpieza de contenedores principales */
-    main, #view-form-tab {
-        display: block !important;
-        width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    /* 4. Compactar los contenedores de secciones */
-    .bg-white {
-        border: 1px solid #e2e8f0 !important;
-        padding: 0.25rem !important; /* Reducido al mínimo */
-        margin-bottom: 0.25rem !important;
-        box-shadow: none !important;
-        page-break-inside: avoid; /* Evita que una sección se parta en dos hojas */
-    }
-
-    /* 5. Ajustar formularios para impresión */
-    input, select, textarea {
-        border: 1px solid #cbd5e1 !important;
-        padding: 1px 2px !important;
-        font-size: 9px !important;
-        height: auto !important;
-        background-color: transparent !important;
-    }
-
-    /* 6. Optimizar el grid para no perder columnas */
-    .grid {
-        display: grid !important;
-        grid-template-columns: repeat(3, 1fr) !important; /* Mantiene 3 columnas */
-        gap: 0.2rem !important;
-    }
-
-    /* 7. Eliminar fondos oscuros para ahorrar tinta y mejorar legibilidad */
-    .bg-\[\#696158\] {
-        background-color: #f1f5f9 !important;
-        color: #000 !important;
-        border-bottom: 1px solid #000 !important;
-    }
-
-    /* 8. Asegurar visibilidad de checkboxes */
-    input[type="checkbox"] {
-        border: 1px solid #000 !important;
-        width: 10px !important;
-        height: 10px !important;
-    }
-}
 
 
 
@@ -177,7 +96,7 @@
             <h1 class="text-4xl md:text-5xl font-bold text-[#696158] mb-4">
                  Reportes QAQC Mantención VDF y PS- PGP 2026
             </h1>
-            <p class="text-2xl text-[#696158] max-w-3xl mx-auto no-print">
+            <p class="text-2xl text-[#696158] max-w-3xl mx-auto">
                 Unidad DCS & Accionamiento - Celulosa Arauco Planta Constitución 
             </p>
 
@@ -317,7 +236,7 @@
                 </div>
 
                 <div id="container-pendientes" class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="p-6 bg-slate-50 border-b border-slate-100"><h3 class="text-xs font-black text-[#696158] uppercase tracking-widest">Listado de Equipos</h3></div>
+                    <div class="p-6 bg-slate-50 border-b border-slate-100"><h3 class="text-xs font-black text-[#696158] uppercase tracking-widest">Listado de Equipos Pendientes</h3></div>
                     <div class="overflow-x-auto max-h-[400px] audit-list">
                         <table class="w-full text-left">
                             <thead class="sticky top-0 bg-white shadow-sm z-10">
@@ -335,15 +254,6 @@
             </div>
 
             <div id="view-form-tab" class="hidden relative pb-20">
-		
-				
-		<div class="flex justify-end my-6">
- 			   <button type="button" onclick="window.print()" 
-       		     class="bg-white border-2 border-[#EA7600] text-[#EA7600] font-black px-3 py-3 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-[#EA7600] hover:text-white transition-all">
-   		     <i class="fas fa-print mr-2"></i> Imprimir Reporte
- 		   </button>
-		</div>
-				
                 <div id="form-auth-lock" class="hidden absolute inset-0 z-40 flex items-start justify-center pt-20 form-locked-overlay rounded-3xl">
                     <div class="bg-white p-6 rounded-2xl shadow-xl text-center max-w-sm">
                         <h3 class="text-sm font-black text-[#696158] uppercase mb-2">Acceso Restringido</h3>
@@ -819,9 +729,9 @@ async function loadHistory() {
                         if (viejaResp.vb_completado !== nuevaResp.vb_completado) {
                             cambios.push(`${tNom}: V°B° de [${vOld}] a [${vNew}]`);
                         }
+                        ['valor_u', 'valor_v', 'valor_w', 'frec_2', 'volt_2', 'amp_2', 'c_original', 'c_real', 'hr_ventilador'].forEach(campo => {
+                        if (nuevaResp[campo] !== undefined) {
                         
-                        ['valor_u', 'valor_v', 'valor_w', 'frec_2', 'volt_2', 'amp_2'].forEach(campo => {
-                            if (nuevaResp[campo] !== undefined) {
                                 let oField = viejaResp[campo] || 'Vacío';
                                 let nField = nuevaResp[campo] || 'Vacío';
                                 if (oField != nField) {
@@ -909,6 +819,15 @@ async function loadHistory() {
                  </div>`;
     } 
     // -------------------------------------------------
+
+else if (desc.includes("registrar las horas de funcionamiento del ventilador por panel o pc")) {
+        extra = `<div class="mt-3">
+                    <input type="text" placeholder="Hrs de servicios" data-task="${tarea.id}" data-field="hr_ventilador" class="w-full border p-2 rounded-lg text-[10px] bg-slate-50">
+                 </div>`;
+    }
+
+
+
     else if (tarea.tipo_entrada === 'volt_amp') {
         extra = `<div class="flex gap-2 mt-2"><input type="text" placeholder="V" data-task="${tarea.id}" data-field="valor_v" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"><input type="text" placeholder="A" data-task="${tarea.id}" data-field="valor_w" class="flex-1 border p-2 rounded-lg text-[10px] bg-slate-50"></div>`;
     }
